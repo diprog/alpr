@@ -1,0 +1,17 @@
+@font-face {
+    font-family: 'FE';
+    src: url("../fonts/FE-FONT.TTF");
+}
+
+
+.overflow-auto {
+    max-height: 85vh; /* задаем максимальную высоту */
+}
+
+.cbtn-sm {
+    --bs-btn-font-size: .75rem;
+}
+
+.plate {
+    font-family: 'FE';
+}

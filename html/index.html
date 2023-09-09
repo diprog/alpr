@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ALPR</title>
+    <link href="bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="css/index.css" rel="stylesheet">
+</head>
+<body class="d-flex flex-column align-items-center justify-content-center min-vh-100">
+
+<div class="d-flex flex-column container w-auto gap-5">
+    <div class="main_loader">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+    <div class="main d-flex flex-column gap-4 border p-5 bg-body-tertiary rounded shadow my-5 rounded-4 d-none"
+         style="min-width: 40vw">
+        <h3><i class="bi bi-film"></i> Добавленные видео</h3>
+
+        <span id="no_videos_added" class="text-center lead text-danger">Вы ещё не добавили ни одного видео.</span>
+
+        <div class="list-group rounded-4 d-none" id="videos_list">
+        </div>
+
+        <div class="d-flex flex-row fs-6 d-none" id="instruction">
+            <div class="col-md-auto align-items-start text-start">
+                <i class="bi bi-info-circle"></i>
+
+            </div>
+            <div class="col-md-auto ms-3 me-2">
+                <div class="h-100 border border-1 border-dark-subtle"></div>
+            </div>
+            <div class="col" style="max-width: 400px">
+                Инструкция<br>
+                <small class="opacity-75">
+                    Cначала нажмите на кнопку <span class="text-primary mx-1"> <i
+                        class="bi bi-search"></i> Найти номера</span>, чтобы найти все уникальные номера без повторений.<br>
+                    После окончания поиска, кнопка будет заменена на новую - <span class="text-primary mx-1"> <i
+                        class="bi bi-eye"></i> Распознать номера</span>.<br>
+                    Нажмите на новую кнопку, чтобы получить список всех<br>найденных номеров для дальнейшего экспорта в
+                    Excel.
+                </small>
+            </div>
+        </div>
+        <input class="form-control d-none" type="file" id="file_chooser" onchange="onVideoFileSelected($(this))">
+        <button type="button" class="btn btn-primary rounded-4 btn-lg shadow w-100 mt-3 bg-gradient "
+                id="add_video_btn"
+                onclick="onAddVideoBtnClick()">Добавить видео
+        </button>
+    </div>
+
+</div>
+
+<template id="video_template">
+    <div class="list-group-item p-2 border-dark-subtle w-100">
+        <div class="d-flex flex-row align-items-center justify-content-between p-2 pe-0 w-100 gap-3">
+            <div class="col-sm-5 col-md-6">
+                <div class="d-flex flex-row align-items-center gap-3">
+                    <div style="min-width: 48px; min-height:48px;" class="video-preview bg-dark-subtle rounded-3"></div>
+                    <div class="d-flex flex-column">
+                        <div class="d-md-grid d-sm-grid d-lg-flex flex-row">
+                            <small class="time text-nowrap"></small>
+                        </div>
+
+                        <span class="">${filename}</span>
+
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="status col text-center">
+
+            </div>
+            <button type="button" class="toggle-btn btn p-1 fs-4 m-0 border-0" onclick="toggleVideoListItem($(this))"><i
+                    class="bi bi-caret-up"></i></button>
+        </div>
+        <div class="d-flex flex-column p-4 border-top d-none" name="video-menu">
+            <div class="d-flex flex-column p-2 gap-1">
+                <h6><i class="bi bi-car-front-fill"></i> Найденные номера</h6>
+                <span class="no_plates">Найденные номера отсутствуют, нажмите на кнопку "Найти номера"</span>
+                <div class="d-flex flex-row w-100 d-none align-items-center text-center justify-content-center gap-2">
+                    <div class="spinner-grow spinner-grow-sm text-primary" role="status"></div>
+                    <span class="progress-desc text-center text-primary">Обработано кадров...</span></div>
+                <div class="plates d-flex flex-column p-2 border bg-body-secondary rounded-4 overflow-y-auto d-none"
+                     style="max-height: 400px">
+
+                </div>
+                <div class="alpr-buttons d-flex flex-column gap-2 pt-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-3 w-100"
+                            onclick="findUniquePlates('${filename}')"><i
+                            class="bi bi-search"></i> Найти номера
+                    </button>
+                    <!--                    <button type="button" class="btn btn-outline-primary btn-sm rounded-3 w-100 disabled"><i-->
+                    <!--                            class="bi bi-eye"></i> Распознать номера-->
+                    <!--                    </button>-->
+                </div>
+                <div class="d-flex flex-column gap-2 pt-3">
+                    <button type="button" class="stop-video btn btn-outline-danger btn-sm rounded-3 w-100 d-none"
+                            onclick="stopVideo('${filename}')"><i class="bi bi-stop-fill"></i> Остановить поиск
+                    </button>
+                    <button type="button" class="restart-video btn btn-outline-danger btn-sm rounded-3 w-100 d-none"
+                            onclick="restartVideo('${filename}')"><i class="bi bi-arrow-repeat"></i> Начать поиск заново
+                    </button>
+                    <!--                    <button type="button" class="btn btn-outline-primary btn-sm rounded-3 w-100 disabled"><i-->
+                    <!--                            class="bi bi-eye"></i> Распознать номера-->
+                    <!--                    </button>-->
+                </div>
+            </div>
+            <div class="export-buttons d-flex flex-column p-2">
+                <h6 class=""><i class="bi bi-download"></i> Скачать номера</h6>
+                <span class="info d-none text-danger"></span>
+                <div class="d-flex flex-row gap-3">
+                    <div class="col">
+                        <button type="button" class="btn btn-outline-success btn-sm rounded-3 mt-3 w-100"
+                                onclick="downloadExcel('${filename}')"><i
+                                class="bi bi-filetype-xlsx"></i>
+                            Excel
+                        </button>
+                    </div>
+                    <div class="col">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-3 mt-3 w-100"
+                                onclick="downloadTxt('${filename}')"><i
+                                class="bi bi-file-earmark-text"></i>
+                            Текст
+                        </button>
+                    </div>
+                </div>
+                <div class="d-flex flex-row gap-3">
+                    <div class="col">
+                        <button type="button"
+                                class="download-frames-btn btn btn-outline-primary btn-sm rounded-3 mt-3 w-100"
+                                onclick="downloadCarImagesZip('${filename}')"><i class="bi bi-file-zip"></i>
+                            Архив из изображений вырезанных машин
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-danger rounded-3 mt-3" onclick="deleteVideo('${filename}')"><i
+                    class="bi bi-trash"></i> Удалить видео
+            </button>
+
+        </div>
+
+
+    </div>
+</template>
+
+<template id="plate_number_template">
+    <div class="d-flex flex-row py-1 px-3 justify-content-between align-items-center d-none">
+        <div class="col-2"><code class="text-body">${index}</code></div>
+        <div class="col"><code class="text-body plate">${plate}</code></div>
+        <div class="d-flex flex-row gap-2">
+            <a href="img/${plate}_${video_filename}.jpg" class="fs-5" target="_blank" rel="noopener noreferrer"><i
+                class="bi bi-card-image"></i></a>
+        <a href="img/car0_${frame_number}_${plate}_${video_filename}.jpg" class="fs-5" target="_blank" rel="noopener noreferrer"><i class="bi bi-car-front-fill"></i></a>
+        </div>
+
+    </div>
+</template>
+
+<template id="found_plates_template">
+    <button data-bs-toggle="tooltip"
+            data-bs-title="Количество найденных уникальных номеров (без повторений)"
+            class="text-bg-success btn badge px-1 py-1 text-center"
+            style="height: min-content">
+        <small><i
+                class="bi bi-search"></i> ${amount}</small>
+    </button>
+</template>
+
+<template id="awaiting_action_template">
+    <button data-bs-toggle="tooltip"
+            data-bs-title="Вы добавили видео, но ничего ещё с ним не сделали."
+            class="text-bg-secondary btn badge px-1 py-1 text-center"
+            style="height: min-content">
+        Ожидает действия
+    </button>
+</template>
+
+<template id="in_queue_template">
+    <button data-bs-toggle="tooltip"
+            data-bs-title="Видео в очереди на распознавание."
+            class="text-bg-primary btn badge px-1 py-1 text-center"
+            style="height: min-content">
+
+        В очереди (${pos})
+    </button>
+</template>
+
+<template id="finding_plates_template">
+    <button data-bs-toggle="tooltip"
+            data-bs-title="Выполняется поиск уникальных номеров."
+            class="text-bg-primary btn badge px-1 py-1 text-center d-none align-items-center"
+            style="height: min-content">
+        <div class="spinner-grow" role="status" style="width: 12px; height: 12px">
+        </div>
+        Поиск номеров
+    </button>
+</template>
+
+<script src="jquery/jquery-3.7.0.min.js"></script>
+<script src="tmpl/jquery.tmpl.min.js"></script>
+<script src="bootstrap/bootstrap.bundle.min.js"></script>
+
+<script src="js/templates.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/index.js"></script>
+</body>
+</html>
